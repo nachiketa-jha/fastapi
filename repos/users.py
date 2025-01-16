@@ -1,7 +1,8 @@
 from contextlib import AbstractContextManager
 import datetime
+from fastapi import HTTPException
 from typing import Callable, Iterator, Optional
-from bcrypt import hashpw, gensalt
+from bcrypt import hashpw, gensalt, checkpw
 from schemas.user import UserResponse
 from sqlalchemy.orm import Session
 import re
@@ -46,7 +47,7 @@ class UserRepository:
             session.commit() 
             return print("Deleted Successfully!")
  
-    def update_user(self, user_id, username:Optional[str]=None, password:Optional[str]=None):   # update 1
+    def update_user(self, user_id, old_password, username:Optional[str]=None, new_password:Optional[str]=None):   # update 1
         with self.session_factory() as session:
             user = session.query(User).filter(User.user_id == user_id).first()
             if user is None:
@@ -54,10 +55,13 @@ class UserRepository:
             updated_at = datetime.datetime.now()
             if username is not None:
                 user.username = username
-            if password is not None:
-                if not re.match(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$", password):
+            if new_password is not None:
+                if old_password is None or not checkpw(old_password.encode('utf-8'), user.password.encode('utf-8')):
+                    raise HTTPException (status_code=401, detail=f"Unauthorized User! Password entered is incorrect")
+            
+                if not re.match(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$", new_password):
                     return f"Error! Password must have at least one uppercase letter, one lowercase letter, one digit, one special character, and be at least 8 characters long."
-                user.password=hashpw(password.encode('utf-8'), gensalt()).decode('utf-8')
+                user.password=hashpw(new_password.encode('utf-8'), gensalt()).decode('utf-8')
             user.updated_at = updated_at
             session.commit()
             session.refresh(user)

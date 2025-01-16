@@ -40,11 +40,12 @@ def add(user_id: int, username: str, password: str,
 @inject
 def update_user(
     user_id: int,
+    old_password: str,
     uname: Optional[str]=None,
-    password: Optional[str]=None,
+    new_password: Optional[str]=None,
     user_service: UserService = Depends(Provide[Container.user_service])
 ):
-    return user_service.update_userRepo(user_id,uname,password)
+    return user_service.update_userRepo(user_id,uname,old_password, new_password)
 
 @router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 @inject
