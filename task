@@ -1,0 +1,11 @@
+            make repo for roles and user_roles
+            make services for the same
+            add get by id for all
+            check update parameters
+make is admin, if isadmin, they can delete posts
+            make createdat and updated at for each table
+            update check
+
+user id = 200
+role id = 201 - user id = 203
+post id = 202

@@ -1,0 +1,11 @@
+dependency-injector
+fastapi[standard]
+uvicorn
+pyyaml
+sqlalchemy
+pytest
+requests
+pytest-cov
+pydantic
+bcrypt
+re
