@@ -67,6 +67,6 @@ class userRole_NotFoundError(Exception):
         super().__init__(f"{self.entity_name} not found, id: {entity_id}")
 
 
-class UserNotFoundError(userRole_NotFoundError):
+class UserRoleNotFoundError(userRole_NotFoundError):
 
     entity_name: str = "UserRole"
