@@ -5,7 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 from datetime import datetime
 from sqlalchemy.orm import sessionmaker
-from schemas.user import UserResponse
+from ..schemas.user import UserResponse
 from ..repos.users import UserRepository, UserNotFoundError
 from ..entities.users import User
 from ..application import app

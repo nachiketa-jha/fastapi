@@ -29,7 +29,7 @@ class UserRoleRepository:
         with self.session_factory() as session:
             entity: UserRole = session.query(UserRole).filter(UserRole.user_id == user_id).first()
             if not entity:
-                raise UserNotFoundError(user_id)
+                raise UserRoleNotFoundError(user_id)
             session.delete(entity)
             session.commit()
             return f"Deleted Successfully!"
@@ -60,12 +60,10 @@ class UserRoleRepository:
 
 
 class userRole_NotFoundError(Exception):
-
-    entity_name: str
+    entity_name: str = "UserRole"  # Set the default entity name here
 
     def __init__(self, entity_id):
         super().__init__(f"{self.entity_name} not found, id: {entity_id}")
-
 
 class UserRoleNotFoundError(userRole_NotFoundError):
 

@@ -28,15 +28,15 @@ class PostRepository:
                 raise PostNotFoundError(user_id)
             return PostResponse.model_validate(user_id)
         
-    def add_post_repo(self,post_id,post_text,user_id):
+    def add_post_repo(self, post_id, post_text, user_id):
         with self.session_factory() as session:
             created_at = datetime.datetime.now()
-            post = Post(post_id=post_id, post_text=post_text, user_id=user_id,created_at=created_at,updated_at=None)
+            post = Post(post_id=post_id, post_text=post_text, user_id=user_id, created_at=created_at, updated_at=None)
             session.add(post)
             session.commit()
             session.refresh(post)
-            return {"Added successfully!": PostResponse.model_validate(post)}
-            
+            return {"Added Successfully": PostResponse.model_validate(post)}  # Corrected key
+                 
         
     def updatepost(self, post_id:int, postText:str, userID:int)-> None:
         with self.session_factory() as session:
