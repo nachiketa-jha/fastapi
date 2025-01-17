@@ -45,7 +45,7 @@ def update_user(
     new_password: Optional[str]=None,
     user_service: UserService = Depends(Provide[Container.user_service])
 ):
-    return user_service.update_user(user_id,username,old_password, new_password)
+    return user_service.update_user(user_id,old_password, username, new_password)
 
 @router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 @inject

@@ -91,15 +91,13 @@ class UserService:
             raise HTTPException(status_code=400, detail="Password does not meet the required criteria.")
     
         hashed_password = self.password_strategy.encrypt(password)
-        created_at = datetime.datetime.now().replace(microsecond=0)
-        
-        return self._repository.add(user_id, username, hashed_password, created_at)
+        return self._repository.add(user_id, username, hashed_password)
 
     def delete_user_by_id(self, user_id: int) -> None:
         return self._repository.delete_by_id(user_id)
     
     def update_user(self, user_id: int, old_password: str, username: Optional[str], new_password: Optional[str]):
-        user = self.get_user_by_id(user_id)
+        user = self._repository.get_by_id(user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
@@ -114,4 +112,4 @@ class UserService:
         if username:
             user.username = username
         user.updated_at = datetime.datetime.now()
-        return self._repository.update_user(user_id, username)
+        return self._repository.update_user(user_id, username, new_password)

@@ -23,7 +23,7 @@ class UserRepository:
             user = session.query(User).filter(User.user_id == user_id).first()
             if not user:
                 raise UserNotFoundError(user_id)
-            return UserResponse.model_validate(user)
+            return user
 
     def add(self, user_id:int ,username:str,password:str) -> User: 
         with self.session_factory() as session:
@@ -42,7 +42,7 @@ class UserRepository:
             session.commit() 
             return print("Deleted Successfully!")
  
-    def update_user(self, user_id, username:Optional[str]=None, hashed_password:Optional[str]=None): 
+    def update_user(self, user_id, username:Optional[str]=None, password:Optional[str]=None):   # update 1
         with self.session_factory() as session:
             user = session.query(User).filter(User.user_id == user_id).first()
             if user is None:
@@ -50,8 +50,8 @@ class UserRepository:
             updated_at = datetime.datetime.now()
             if username is not None:
                 user.username = username
-            if hashed_password is not None:
-                user.password=hashed_password
+            if password is not None:
+                user.password=password
                 
             user.updated_at = updated_at
             session.commit()
