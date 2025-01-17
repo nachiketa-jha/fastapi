@@ -6,6 +6,7 @@ from database import Base
 
 class UserRole(Base):
     __tablename__ = "UserRoles"
+    __table_args__ = {"extend_existing": True}
 
     user_role_id = Column(Integer, primary_key=True)  
     user_id = Column(Integer, ForeignKey("Users.user_id"))

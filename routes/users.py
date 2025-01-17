@@ -59,3 +59,7 @@ def remove(
         return Response(status_code=status.HTTP_404_NOT_FOUND)
     else:
         return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+@router.get("/status")
+def get_status():
+    return {"status": "OK"}

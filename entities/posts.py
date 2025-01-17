@@ -7,6 +7,7 @@ from database import Base
 class Post(Base):
 
     __tablename__ = "Posts"
+    __table_args__ = {"extend_existing": True}
 
     post_id = Column(Integer, primary_key=True)
     post_text = Column(String(255))

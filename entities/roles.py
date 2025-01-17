@@ -5,6 +5,7 @@ from database import Base
 
 class Role(Base):
     __tablename__ = "Roles"
+    __table_args__ = {"extend_existing": True}
 
     role_id = Column(Integer,primary_key=True)
     role_name = Column(String(30))
