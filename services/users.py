@@ -12,12 +12,15 @@ class StrategyPassword:
         pass
     def encrypt(self, password:str):
         return hashpw(password.encode('utf-8'), gensalt()).decode('utf-8')
-    def validate(self, old_password: str, current_password: str):
+    def validate(self, old_password: str, hashed_password: str):
         print("Verifying old password...")
-        print(old_password, current_password)
-        print(old_password.encode('utf-8'), current_password.encode('utf-8'))
-        if old_password is None and not checkpw(old_password.encode('utf-8'), current_password.encode('utf-8')):
-            raise HTTPException(status_code=401, detail="Unauthorized: Password entered is incorrect")
+
+        if old_password is None:
+            raise HTTPException(status_code=400, detail="Old password is required")
+
+        if not checkpw(old_password.encode('utf-8'), hashed_password.encode('utf-8')):
+            raise HTTPException(status_code=401, detail="Unauthorized: Incorrect old password")
+
         print("Old password verified")
         return "Authorized"
 
