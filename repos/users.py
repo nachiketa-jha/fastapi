@@ -18,12 +18,12 @@ class UserRepository:
             users = session.query(User).all()
             return [UserResponse.model_validate(user) for user in users]
 
-    def get_by_id(self, user_id: int) -> User:  
+    def get_by_id(self, user_id: int) -> UserResponse:  
         with self.session_factory() as session:
             user = session.query(User).filter(User.user_id == user_id).first()
             if not user:
                 raise UserNotFoundError(user_id)
-            return user
+            return UserResponse.model_validate(user) 
 
     def add(self, user_id:int ,username:str,password:str) -> User: 
         with self.session_factory() as session:
@@ -57,7 +57,7 @@ class UserRepository:
             session.commit()
             session.refresh(user)
             return {"Updated Successfully!": UserResponse.model_validate(user)}
-
+    
 
 class user_NotFoundError(Exception):
 

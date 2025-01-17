@@ -11,7 +11,7 @@ class User(Base):
     __table_args__ = {'extend_existing': True}
 
     user_id = Column(Integer, primary_key=True)
-    username = Column(String(30), unique=True)
+    username = Column(String(30))
     password = Column(String(25))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now())

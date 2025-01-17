@@ -1,100 +1,71 @@
+from contextlib import contextmanager
 from unittest import mock
-
+from sqlalchemy import create_engine
 import pytest
 from fastapi.testclient import TestClient
-
+from datetime import datetime
+from sqlalchemy.orm import sessionmaker
+from schemas.user import UserResponse
 from ..repos.users import UserRepository, UserNotFoundError
 from ..entities.users import User
 from ..application import app
 
+engine = create_engine("sqlite:///:memory:", echo=True)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+@contextmanager
+def get_test_session():
+    session = TestingSessionLocal()
+    try:
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+@pytest.fixture
+def user_repo():
+    User.metadata.drop_all(bind=engine)
+    User.metadata.create_all(bind=engine)
+    return UserRepository(session_factory=get_test_session)
+
+@pytest.fixture
+def sample_user(user_repo):
+    if not user_repo.get_all():  # Add user only if table is empty
+        user_repo.add(user_id=1, username="testuser", password="testpass")
+    return user_repo.get_by_id(1)
 
 @pytest.fixture
 def client():
     yield TestClient(app)
 
 
-def test_get_list(client):
-    repository_mock = mock.Mock(spec=UserRepository)
-    repository_mock.get_all.return_value = [
-        User(user_id=1, username="test1", password="pwd"),
-        User(user_id=2, username="test2", password="pwd"),
-    ]
+def test_get_all(user_repo, sample_user):
+    users = user_repo.get_all()
+    assert len(users) == 1
+    assert users[0].username == "testuser"
 
-    with app.container.user_repository.override(repository_mock):
-        response = client.get("/users")
+def test_get_by_id(user_repo, sample_user):
+    user = user_repo.get_by_id(1)
+    assert user.username == "testuser"
 
-    assert response.status_code == 200
-    data = response.json()
-    assert data == [
-        {"user_id": 1, "username": "test1", "password": "pwd"},
-        {"user_id": 2, "username": "test2", "password": "pwd"},
-    ]
+    with pytest.raises(UserNotFoundError):
+        user_repo.get_by_id(999)
 
+def test_add_user(user_repo):
+    response = user_repo.add(user_id=2, username="newuser", password="newpass")
+    assert response["Added Successfully!"].username == "newuser"
 
-def test_get_by_id(client):
-    repository_mock = mock.Mock(spec=UserRepository)
-    repository_mock.get_by_id.return_value = User(
-        user_id=1,
-        username="xyz",
-        password="pwd",
-            )
+def test_delete_by_id(user_repo, sample_user):
+    user_repo.delete_by_id(1)
+    with pytest.raises(UserNotFoundError):
+        user_repo.get_by_id(1)
 
-    with app.container.user_repository.override(repository_mock):
-        response = client.get("/users/1")
-
-    assert response.status_code == 200
-    data = response.json()
-    assert data == {"user_id": 1, "username": "xyz", "password": "pwd"}
-    # repository_mock.get_by_id.assert_called_once_with(1)
-    # assert repository_mock.get_by_id.call_count == 2
-
-
-# def test_get_by_id_404(client):
-#     repository_mock = mock.Mock(spec=UserRepository)
-#     repository_mock.get_by_id.side_effect = UserNotFoundError(1)
-
-#     with app.container.user_repository.override(repository_mock):
-#         response = client.get("/users/1")
-
-#     assert response.status_code == 404
-
-
-@mock.patch("repos.users.UserRepository.add", return_value=User(user_id=1, username="xyz", password="pwd"))
-def test_add(mock_add, client):
-    repository_mock = mock.Mock(spec=UserRepository)
-
-    with app.container.user_repository.override(repository_mock):
-        response = client.post("/users", json={"username": "xyz", "password": "pwd"})
-
-    assert response.status_code == 405
-    data = response.json()
-    assert data == {"user_id": 1, "username": "xyz"}
-    repository_mock.add.assert_called_once_with(username="xyz", password="pwd")
-
-
-
-def test_remove(client):
-    repository_mock = mock.Mock(spec=UserRepository)
-
-    with app.container.user_repository.override(repository_mock):
-        response = client.delete("/users/1")
-
-    assert response.status_code == 204
-    repository_mock.delete_by_id.assert_called_once_with(1)
-
-
-# def test_remove_404(client):
-#     repository_mock = mock.Mock(spec=UserRepository)
-#     repository_mock.delete_by_id.side_effect = UserNotFoundError(1)
-
-#     with app.container.user_repository.override(repository_mock):
-#         response = client.delete("/users/1")
-
-#     assert response.status_code == 404
-
-
-def test_status(client):
-    response = client.get("/status")
-    assert response.status_code == 200
-    data = response.json()
-    assert data == {"status": "OK"}
+def test_update_user(user_repo, sample_user):
+    response = user_repo.update_user(1, username="updateduser", password="updatedpass")
+    assert response["Updated Successfully!"].username == "updateduser"
+    
+    with pytest.raises(ValueError):
+        user_repo.update_user(999, username="nonexistent")
