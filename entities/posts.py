@@ -1,16 +1,51 @@
-import datetime
-from sqlalchemy import Column, DateTime, ForeignKey, String, Boolean, Integer, func
 from pydantic import BaseModel
-from sqlalchemy.orm import relationship
-from database import Base
+from datetime import datetime
 
-class Post(Base):
+class PostResponse(BaseModel):
+    post_id: int
+    post_text: str
+    user_id: int
+    created_at: datetime
+    updated_at: datetime
 
-    __tablename__ = "Posts"
-    __table_args__ = {"extend_existing": True}
+    class Config:
+        # orm_mode = True
+        from_attributes = True
 
-    post_id = Column(Integer, primary_key=True)
-    post_text = Column(String(255))
-    user_id = Column(Integer, ForeignKey("Users.user_id"))
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+class CreatePostResponse(BaseModel):
+    post_id: int
+    post_text: str
+    user_id: int
+    created_at: datetime
+
+    class Config:
+        # orm_mode = True
+        from_attributes = True
+
+class UpdatePostResponse(BaseModel):
+    post_id: int
+    post_text: str
+    user_id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        # orm_mode = True
+        from_attributes = True
+
+class GetPostResponse(BaseModel):
+    post_id: int
+    post_text: str
+    user_id: int
+
+    class Config:
+        # orm_mode = True
+        from_attributes = True
+
+class GetPostByIDResponse(BaseModel):
+    post_id: int
+    post_text: str
+
+    class Config:
+        # orm_mode = True
+        from_attributes = True

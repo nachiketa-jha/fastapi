@@ -1,118 +1,60 @@
-import datetime
 from typing import Iterator, Optional
+
+import bcrypt
 from repos.users import UserRepository
-from entities.users import User
-from bcrypt import hashpw, gensalt, checkpw
+from schemas.user import User
 from fastapi import HTTPException
-from schemas.user import UserResponse
-import database as db
+from bcrypt import hashpw, gensalt, checkpw
 
-class StrategyPassword:
-    def __init__(self):
-        pass
-    def encrypt(self, password:str):
-        return hashpw(password.encode('utf-8'), gensalt()).decode('utf-8')
-    def validate(self, old_password: str, hashed_password: str):
-        print("Verifying old password...")
-
-        if old_password is None:
-            raise HTTPException(status_code=400, detail="Old password is required")
-
-        if not checkpw(old_password.encode('utf-8'), hashed_password.encode('utf-8')):
-            raise HTTPException(status_code=401, detail="Unauthorized: Incorrect old password")
-
-        print("Old password verified")
-        return "Authorized"
-
-
-class Rule:
-    def is_valid(self, password):
-        pass
-
-class MinLengthRule(Rule):
-    def __init__(self, min_length: int):
-        self.min_length = min_length
-    def is_valid(self, password: str):
-        return len(password) >= self.min_length
-    
-class MaxLengthRule(Rule):
-    def __init__(self, max_length: int):
-        self.max_length = max_length
-    def is_valid(self, password: str):
-        return len(password) <= self.max_length
-
-class SpecialCharacter(Rule):
-    def __init__(self, special_char:str = "[@$!%*?&]"):
-        self.special_char = special_char
-    def is_valid(self, password: str):
-        return any(char in self.special_char for char in password)
-
-class CapitalRule(Rule):
-    def __init__(self, capital_char: str):
-        self.capital_char = capital_char
-    def is_valid(self, password:str):
-        return any(char.isupper() for char in password)
-    
-class SmallRule(Rule):
-    def __init__(self, small_char: str):
-        self.small_char = small_char
-    def is_valid(self, password:str):
-        return any(char.islower() for char in password)
-    
-class PasswordRuleEngine(Rule):
-    def __init__(self, rules):
-        self.rules= rules
-    
-    def is_valid(self, password):
-        return all([rule.is_valid(password) for rule in self.rules])
+from services.password_rules import PasswordRuleEngine, PasswordEncrypt, PasswordRules, MaxLengthRule, MinLengthRule, UpperCaseRule, LowerCaseRule, NumberRule, SpecialCharacterRule
 
 class UserService:
+
     def __init__(self, user_repository: UserRepository) -> None:
         self._repository: UserRepository = user_repository
-        self.password_strategy = StrategyPassword()
-        # Define the rules to validate passwords
-        self.rules = [
+        rules = [
             MinLengthRule(8),
-            MaxLengthRule(20),
-            SpecialCharacter(),
-            CapitalRule(""),
-            SmallRule("")
+            MaxLengthRule(26),
+            UpperCaseRule(),
+            LowerCaseRule(),
+            NumberRule(),
+            SpecialCharacterRule()
         ]
-        self.password_rule_engine = PasswordRuleEngine(self.rules)
+        self.password_rule_engine = PasswordRuleEngine(rules)
 
-    def get_users(self):
+        self.password_encrypt = PasswordEncrypt()
+
+    def get_users(self): 
         return self._repository.get_all()
 
-    def get_user_by_id(self, user_id: int) -> UserResponse:
-        user = self._repository.get_by_id(user_id)
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+    def get_user_by_id(self, user_id: int) -> User:  
         return self._repository.get_by_id(user_id)
 
-    def create_user(self, user_id: int, username: str, password: str) -> UserResponse:
-        if not self.password_rule_engine.is_valid(password):
-            raise HTTPException(status_code=400, detail="Password does not meet the required criteria.")
+    def create_user(self, user_id: int, uname: str, password: str): 
+        password_validation = self.password_rule_engine.is_valid(password)
+        if isinstance(password_validation, dict): 
+            return password_validation
+        hashed_password = self.password_encrypt.encrypt(password)
+        return self._repository.add(user_id, uname, hashed_password)
     
-        hashed_password = self.password_strategy.encrypt(password)
-        return self._repository.add(user_id, username, hashed_password)
-
-    def delete_user_by_id(self, user_id: int) -> None:
-        return self._repository.delete_by_id(user_id)
-    
-    def update_user(self, user_id: int, old_password: str, username: Optional[str], new_password: Optional[str]):
-        user = self._repository.get_by_id(user_id)
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
-        
+    def update_user_service(self, user_id: str, uname: Optional[str], new_password: Optional[str]): 
         if new_password:
-            if not self.password_strategy.validate(old_password, user.password):
-                raise HTTPException(status_code=401, detail="Old password is incorrect")
-            if not self.password_rule_engine.is_valid(new_password):
-                raise HTTPException(status_code=400, detail="New password does not meet the required criteria")
-            hashed_password = self.password_strategy.encrypt(new_password)
-            new_password = hashed_password
+            password_validation = self.password_rule_engine.is_valid(new_password)
+            if isinstance(password_validation, dict): 
+                return password_validation
+            new_password = self.password_encrypt.encrypt(new_password)
+        return self._repository.update_user(user_id, uname, new_password)
+    
+    def delete_user_by_id(self,user_id):
+        return self._repository.delete_by_id(user_id)
+
+    def login_user(self, user_id: int, password: str) -> dict:
+        user = self._repository.user_login(user_id)
         
-        if username:
-            user.username = username
-        user.updated_at = datetime.datetime.now()
-        return self._repository.update_user(user_id, username, new_password)
+        if not user:
+            return {"Error": "User not found"}
+
+        if not self.password_encrypt.verify(password,user.password):
+            raise HTTPException(status_code=401)
+
+        return {"Success": "Login successful", "user": user}

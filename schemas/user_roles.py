@@ -1,13 +1,18 @@
+import datetime
+from sqlalchemy import Column, DateTime, ForeignKey, String, Boolean, Integer, func
 from pydantic import BaseModel
-from datetime import datetime
+from sqlalchemy.orm import relationship
+from database import Base
 
-class UserRoleResponse(BaseModel):
-    user_role_id: int
-    user_id: int
-    role_id:int
-    updated_at: datetime
-    created_at: datetime
+class UserRole(Base):
+    __tablename__ = "UserRoles"
 
-    class Config:
-       
-        from_attributes = True
+    user_role_id = Column(Integer, primary_key=True)  
+    user_id = Column(Integer, ForeignKey("Users.user_id"))
+    role_id = Column(Integer, ForeignKey("Roles.role_id"))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # # Define relationships
+    # user = relationship("User", back_populates="user_roles")
+    # role = relationship("Role", back_populates="user_roles")

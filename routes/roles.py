@@ -9,7 +9,9 @@ from container import Container
 
 router = APIRouter()
 
+# for roles
 
+## view all
 @router.get("/role")
 @inject
 def get_all_roles(
@@ -17,18 +19,7 @@ def get_all_roles(
 ):
     return Role_service.get_all_roleService()
 
-
-@router.post("/role")
-@inject
-def create_Role(
-    role_id: int,
-    role_name: str,
-    is_admin: bool,
-    Role_service: RoleService = Depends(Provide[Container.role_service])
-):
-    return Role_service.add_role_roleRepo(role_id,role_name,is_admin)
-
-
+## view 1
 @router.get("/role/{role_id}")
 @inject
 def get_role_by_id(
@@ -37,7 +28,19 @@ def get_role_by_id(
 ):
     return Role_service.get_role(role_id)
 
+## add 1
+@router.post("/role")
+@inject
+def create_Role(
+    role_id: int,
+    role_name: str,
+    is_admin: bool,
+    Role_service: RoleService = Depends(Provide[Container.role_service])
+):
+    return Role_service.add_role_service(role_id,role_name,is_admin)
 
+
+## update 1
 @router.put("/role")
 @inject
 def update_Role(
@@ -48,7 +51,7 @@ def update_Role(
 ):
     return Role_service.update_role_roleService(role_id,role_name,is_admin)
 
-
+## delete 1
 @router.delete("/Role")
 @inject
 def delete_Role(

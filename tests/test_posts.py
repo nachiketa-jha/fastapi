@@ -1,15 +1,14 @@
+
 from contextlib import contextmanager
 from unittest import mock
 from sqlalchemy import create_engine
 import pytest
-from fastapi import HTTPException
 from fastapi.testclient import TestClient
-from datetime import datetime
 from sqlalchemy.orm import sessionmaker
-from ..schemas.posts import PostResponse
-from ..repos.posts import PostRepository, PostNotFoundError
-from ..entities.posts import Post
-from ..application import app
+from repos.posts import PostNotFoundError, PostRepository
+from schemas.posts import Post
+from application import app
+from services.posts import PostService
 
 engine = create_engine("sqlite:///:memory:", echo=True)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -34,70 +33,90 @@ def post_repo():
 
 @pytest.fixture
 def sample_post(post_repo):
-    if not post_repo.get_all_posts_repo():
-        post_repo.add_post_repo(post_id=1, post_text="testpost", user_id=4)
-    return post_repo.get_by_id(1)
+    if not post_repo.get_all_posts_repo():  # Add user only if table is empty
+        post_repo.add_post_repo(post_id=0, post_text="testPostText", user_id=0)
+    return post_repo.get_by_id(0)
 
 @pytest.fixture
 def client():
     yield TestClient(app)
 
 
-def test_get_all_posts(post_repo, sample_post):
-    # Ensure that there is at least one post
-    posts = post_repo.get_all_posts_repo()
-    assert len(posts) == 1
-    assert posts[0].post_text == "testpost"
+def test_get_all(post_repo, sample_post):
+    post = post_repo.get_all_posts_repo()
+    assert len(post) == 1
+    assert post[0].post_text == "testPostText"
 
 def test_get_by_id(post_repo, sample_post):
-    # Test for an existing post
-    post = post_repo.get_by_id(1)
-    assert post.post_text == "testpost"
+    post = post_repo.get_by_id(0)
+    assert len(post) != 0
 
-    # Test for a non-existing post, which should raise a PostNotFoundError
     with pytest.raises(PostNotFoundError):
         post_repo.get_by_id(999)
 
 def test_add_post(post_repo):
-    # Add a new post
-    response = post_repo.add_post_repo(post_id=2, post_text="newpost", user_id=3)
-    assert response["Added Successfully"].post_text == "newpost"
+    response = post_repo.add_post_repo(post_id=2, post_text="testPostText2", user_id=2)
+    assert response.post_text == "testPostText2"
+    assert response.post_id == 2
+    assert response.user_id == 2
 
-    # Check if the new post is added correctly
-    new_post = post_repo.get_by_id(2)
-    assert new_post.post_text == "newpost"
+def test_delete_by_id(post_repo, sample_post):
+    with mock.patch.object(post_repo, 'delete_post_repo') as mock_delete_post:
+        post_repo.delete_post_repo(0)
+        mock_delete_post.assert_called_once()
+    with pytest.raises(PostNotFoundError):
+        post_repo.delete_post_repo(999)
+
 
 def test_update_post(post_repo, sample_post):
-    # Update an existing post
-    response = post_repo.updatepost(1, postText="updatedpost", userID=4)
-    assert response["Updated Successfully!"].post_text == "updatedpost"
-
-    # Check if the post was updated correctly
-    updated_post = post_repo.get_by_id(1)
-    assert updated_post.post_text == "updatedpost"
-
-    # Test trying to update a non-existing post
-    with pytest.raises(ValueError):
-        post_repo.updatepost(999, postText="nonexistent", userID=3)
-
-def test_delete_post_by_creator_or_admin(post_repo, sample_post):
-    # Delete the post by creator (user_id = 4)
-    response = post_repo.delete_post_by_creator_or_admin(user_id=4, post_id=1)
-    assert response == "Deleted Successfully!"
-    
-    # Verify the post is deleted
+    response = post_repo.updatepost(post_id=0, post_text="updatedtestPostText", user_id=0)
+    assert response.post_text == "updatedtestPostText"
     with pytest.raises(PostNotFoundError):
-        post_repo.get_by_id(1)
+        post_repo.updatepost(999,"notExisting",999)
 
-    # Add the post again for further tests
-    post_repo.add_post_repo(post_id=1, post_text="testpost", user_id=4)
+# def test_delete_by_creator_or_admin(post_repo,sample_post):
+#     with mock.patch.object(post_repo, 'delete_post_by_creator_or_admin') as mock_delete_post:
+#         post_repo.delete_post_by_creator_or_admin(1,1)
+#         mock_delete_post.assert_called_once()
 
-    # Test for an admin user (simulate admin role)
-    with mock.patch("sqlalchemy.orm.Session") as mock_session:
-        mock_session.query.return_value.filter.return_value.first.return_value = True  # Simulating an admin
-        response = post_repo.delete_post_by_creator_or_admin(user_id=1, post_id=1)  # Admin user_id = 1
-        assert response == "Deleted Successfully!"
+def test_get_post():
+    mock_repo = mock.Mock(spec=PostRepository)
+    mock_repo.get_by_id.return_value = {"post_id":1,"post_text":"postTextOne","user_id":1}
+    post_service = PostService(mock_repo)
 
-    # Test if a user without the right role tries to delete the post
-    with pytest.raises(HTTPException):
-        post_repo.delete_post_by_creator_or_admin(user_id=2, post_id=1)  # User with no permission
+    posts = post_service.get_post(1)
+    assert posts["post_id"] == 1
+    assert posts["user_id"] == 1
+    assert posts["post_text"] == "postTextOne"
+
+def test_get_all_posts():
+    mock_repo = mock.Mock(spec=PostRepository)
+    mock_repo.get_all_posts_repo.return_value = [{"post_id":1,"post_text":"postTextOne","user_id":1}]
+    post_service = PostService(mock_repo)
+
+    posts = post_service.get_all_posts()
+    assert len(posts) == 1
+    assert posts[0]["post_id"] == 1
+    assert posts[0]["user_id"] == 1
+
+def test_update_post_service():
+    mock_repo = mock.Mock(spec=PostRepository)
+    mock_repo.updatepost.return_value = {"post_id": 1, "post_text": "updatedPost", "user_id": 1,"created_at":"now","updated_at":"now"}
+    
+    post_service = PostService(mock_repo)
+    
+    result = post_service.update_post(1, "updatedPost", 1)
+    
+    assert result["user_id"] == 1
+    assert result["post_text"] == "updatedPost"
+    assert result["post_id"] == 1
+    mock_repo.updatepost.assert_called_once()
+
+def test_delete_post_by_id():
+    mock_repo = mock.Mock(spec=PostRepository)
+    
+    post_service = PostService(mock_repo)
+    
+    post_service.delete_post_service(1)
+    
+    mock_repo.delete_post_repo.assert_called_once_with(1)

@@ -1,7 +1,7 @@
 import datetime
 from typing import Iterator
 from repos.user_roles import UserRoleRepository
-from entities.user_roles import UserRole
+from schemas.user_roles import UserRole
 
 
 class UserRoleService:

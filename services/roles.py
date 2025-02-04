@@ -1,6 +1,6 @@
 from typing import Iterator, Optional
 from repos.roles import RoleRepository
-from entities.roles import Role
+from schemas.roles import Role
 
 
 class RoleService:
@@ -10,7 +10,7 @@ class RoleService:
     def get_all_roleService(self) -> Iterator[Role]:
         return self._repository.get_all()
     
-    def add_role_roleRepo(self, role_id:int, role_name:str, is_admin:bool) -> Role:
+    def add_role_service(self, role_id:int, role_name:str, is_admin:bool) -> Role:
         return self._repository.add_role(role_id,role_name, is_admin)
     
     def get_role(self,role_id:int):

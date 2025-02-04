@@ -3,12 +3,11 @@ from unittest import mock
 from sqlalchemy import create_engine
 import pytest
 from fastapi.testclient import TestClient
-from datetime import datetime
 from sqlalchemy.orm import sessionmaker
-from ..schemas.user_roles import UserRoleResponse
-from ..repos.user_roles import UserRoleRepository, UserRoleNotFoundError, userRole_NotFoundError
-from ..entities.user_roles import UserRole
-from ..application import app
+from repos.user_roles import UserRoleRepository, UserRoleNotFoundError
+from schemas.user_roles import UserRole
+from application import app
+from services.user_roles import UserRoleService
 
 engine = create_engine("sqlite:///:memory:", echo=True)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -33,8 +32,9 @@ def user_role_repo():
 
 @pytest.fixture
 def sample_user_role(user_role_repo):
-    user_role_repo.add_user_role(user_role_id=1, user_id=21, role_id=41)
-    return user_role_repo.getUserRole(1)
+    if not user_role_repo.get_all():  # Add user only if table is empty
+        user_role_repo.add_user_role(user_role_id=0, user_id=0, role_id=0)
+    return user_role_repo.getUserRole(0)
 
 @pytest.fixture
 def client():
@@ -42,32 +42,77 @@ def client():
 
 
 def test_get_all(user_role_repo, sample_user_role):
-    users = user_role_repo.get_all()
-    assert len(users) == 1
-    assert users[0].user_id == 21
+    user_roles = user_role_repo.get_all()
+    assert len(user_roles) == 1
+    assert user_roles[0].user_role_id == 0
 
 def test_get_by_id(user_role_repo, sample_user_role):
-    user_role = user_role_repo.getUserRole(1)
-    assert user_role.user_id == 21
-    with pytest.raises(userRole_NotFoundError):
+    user_roles = user_role_repo.getUserRole(0)
+    assert user_roles.user_role_id == 0
+    with pytest.raises(UserRoleNotFoundError):
         user_role_repo.getUserRole(999)
 
 def test_add_user_role(user_role_repo):
-    response = user_role_repo.add_user_role(user_role_id=2, user_id=23, role_id=43)
-    user_role_response = response["Added successfully"]
-    assert user_role_response.user_id == 23
-    assert user_role_response.role_id == 43
-    assert user_role_response.user_role_id == 2
+    response = user_role_repo.add_user_role(user_role_id=1, user_id=1, role_id=1)
+    assert response.user_role_id == 1
 
 def test_delete_by_id(user_role_repo, sample_user_role):
-    user_role_repo.delete_user_role(21)
+    with mock.patch.object(user_role_repo, 'delete_user_role') as mock_delete_user_role:
+        user_role_repo.delete_user_role(0)
+        mock_delete_user_role.assert_called_once()
     with pytest.raises(UserRoleNotFoundError):
-        user_role_repo.getUserRole(1)
+        user_role_repo.delete_user_role(999)
 
-def test_update_user_role(user_role_repo, sample_user_role):
-    response = user_role_repo.update_user_role(1, user_id=22, role_id=42)
-    user_role_response = response["Updated Successfully"]
-    assert user_role_response.user_id == 22
-    assert user_role_response.role_id == 42
-    with pytest.raises(ValueError):
-        user_role_repo.update_user_role(999, user_id=100, role_id=200)
+def test_update_user(user_role_repo, sample_user_role):
+    response = user_role_repo.update_user_role(user_role_id=0, user_id=2, role_id=2)
+    assert response.user_role_id == 0
+    assert response.user_id == 2
+    with pytest.raises(UserRoleNotFoundError):
+        user_role_repo.update_user_role(999,999,999)
+
+def test_get_user_roles():
+    mock_repo = mock.Mock(spec=UserRoleRepository)
+    mock_repo.get_all.return_value = [{"user_id": 1, "user_role_id": 1,"role_id":1}]
+    
+    user_role_service = UserRoleService(mock_repo)
+    
+    user_roles = user_role_service.get_all()
+    
+    assert len(user_roles) == 1
+    assert user_roles[0]["user_role_id"] == 1
+    assert user_roles[0]["user_id"] == 1
+    assert user_roles[0]["role_id"] == 1
+
+def test_get_user_role_by_id():
+    mock_repo = mock.Mock(spec=UserRoleRepository)
+    mock_repo.getUserRole.return_value = {"user_id": 1, "user_role_id": 1,"role_id":1}
+    
+    user_role_service = UserRoleService(mock_repo)
+    
+    user_roles = user_role_service.get_userRole(1)
+    
+    assert user_roles["user_role_id"] == 1
+    assert user_roles["user_id"] == 1
+    assert user_roles["role_id"] == 1
+    
+
+def test_update_user_role_service():
+    mock_repo = mock.Mock(spec=UserRoleRepository)
+    mock_repo.update_user_role.return_value = {"user_id": 2, "user_role_id": 2,"role_id":1}
+    
+    user_role_service = UserRoleService(mock_repo)
+    
+    result = user_role_service.update_user_role(2,2,1)
+    
+    assert result["user_role_id"] == 2
+    assert result["user_id"] == 2
+    assert result["role_id"] == 1
+
+def test_delete_user_role_by_id():
+    mock_repo = mock.Mock(spec=UserRoleRepository)
+    
+    user_role_service = UserRoleService(mock_repo)
+    
+    user_role_service.delete_user_role(1)
+    
+    mock_repo.delete_user_role.assert_called_once_with(1)

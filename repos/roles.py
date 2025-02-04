@@ -1,21 +1,22 @@
 from contextlib import AbstractContextManager
 import datetime
-from typing import Callable, Iterator
+from typing import Callable, Iterator, Generator
 
 from sqlalchemy.orm import Session
 
-from entities.roles import Role
-from schemas.roles import RoleResponse
+from schemas.roles import Role
+
+from entities.roles import CreateRoleResponse,UpdateRoleResponse,GetRoleResponse
 
 class RoleRepository:
-    def __init__(self, session_factory: Callable[..., AbstractContextManager[Session]]) -> None:
+    def __init__(self, session_factory: Generator[Session, None, None]) -> None:
         self.session_factory = session_factory
 
-    def get_all(self) -> Iterator[Role]:
+    def get_all(self):
         with self.session_factory() as session:
-            roles= session.query(Role).all()
-            return [RoleResponse.model_validate(role) for role in roles]
-
+            roles = session.query(Role).all()
+            return [GetRoleResponse.from_orm(roles) for roles in roles]
+        
     def add_role(self, role_id:int, role_name:str, is_admin:bool) -> Role:
         with self.session_factory() as session:
             created_at = datetime.datetime.now()
@@ -23,13 +24,14 @@ class RoleRepository:
             session.add(role)
             session.commit()
             session.refresh(role)
-            return {"Added Successfully!": RoleResponse.model_validate(role)}
+            print("role added successfully")
+            return CreateRoleResponse.from_orm(role)
         
     def update_role_roleRepo(self,role_id,role_name,is_admin):
         with self.session_factory() as session:
             role = session.query(Role).filter(Role.role_id == role_id).first()
             if role is None:
-                raise ValueError(f"User with role id {role_id} not found")
+                raise RoleNotFoundError(role_id)
             updated_at = datetime.datetime.now()
             if role_name is not None:
                 role.role_name = role_name
@@ -38,8 +40,9 @@ class RoleRepository:
             role.updated_at = updated_at
             session.commit()
             session.refresh(role)
-            return {"Updated successfully!": RoleResponse.model_validate(role)}
-    
+            print("Updated")
+            return UpdateRoleResponse.from_orm(role)
+
     def delete_role_by_role_id(self, role_id) -> None:
         with self.session_factory() as session:
             entity: Role = session.query(Role).filter(Role.role_id == role_id).first()
@@ -47,14 +50,13 @@ class RoleRepository:
                 raise RoleNotFoundError(role_id)
             session.delete(entity)
             session.commit()
-            return f"Deleted Successfully!"
 
     def get_role_fromRepo_by_id(self,role_id):
         with self.session_factory() as session:
             role = session.query(Role).filter(Role.role_id == role_id).first()
-            if not role:
+            if role is None:
                 raise RoleNotFoundError(role_id)
-            return RoleResponse.model_validate(role)
+            return GetRoleResponse.from_orm(role)
 
 class role_NotFoundError(Exception):
 

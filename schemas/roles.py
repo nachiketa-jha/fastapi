@@ -1,13 +1,13 @@
+import datetime
+from sqlalchemy import Column, DateTime, ForeignKey, String, Boolean, Integer, func
 from pydantic import BaseModel
-from datetime import datetime
+from database import Base
 
-class RoleResponse(BaseModel):
-    role_id: int
-    role_name: str
-    is_admin: bool
-    updated_at: datetime
-    created_at: datetime
+class Role(Base):
+    __tablename__ = "Roles"
 
-    class Config:
-       
-        from_attributes = True
+    role_id = Column(Integer,primary_key=True)
+    role_name = Column(String(30))
+    is_admin = Column(Boolean)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now())

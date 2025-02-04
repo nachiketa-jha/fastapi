@@ -1,11 +1,18 @@
+import datetime
+from sqlalchemy import Column, DateTime, ForeignKey, String, Boolean, Integer, func
 from pydantic import BaseModel
-from datetime import datetime
+from sqlalchemy.orm import relationship
+from database import Base
 
-class PostResponse(BaseModel):
-    post_text: str
-    updated_at: datetime
-    created_at: datetime
+class Post(Base):
 
-    class Config:
-       
-        from_attributes = True
+    __tablename__ = "Posts"
+
+    post_id = Column(Integer, primary_key=True)
+    post_text = Column(String(255))
+    user_id = Column(Integer, ForeignKey("Users.user_id"))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # # Define relationship
+    # owner = relationship("User", back_populates="posts")
