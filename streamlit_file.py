@@ -86,7 +86,6 @@ else:
         st.success("Logged out successfully!")
         st.session_state["rerun"] = True
 
-    # Users Menu
     if menu == "Users":
         st.title("Manage Users")
         action = st.selectbox("Action", ["Add", "Update", "Delete", "View All", "View One"])
@@ -140,7 +139,7 @@ else:
                 else:
                     st.warning("Please provide the User ID.")
 
-    # Posts Menu
+
     if menu == "Posts":
         st.title("Manage Posts")
         action = st.selectbox("Action", ["Add", "Update", "Delete", "View All", "View all posts by one user","Delete by access"])
@@ -201,7 +200,7 @@ else:
                 if post_id and user_id:
                     delete_data(f"posts/{user_id}")
     
-    # UserRole Menu
+
     if menu == "UserRoles":
         st.title("Manage UserRoles")
         action = st.selectbox("Action", ["Add", "Update", "Delete", "View All"])
@@ -244,7 +243,7 @@ else:
                 for userRole in userRoles:
                     st.write(f"**User Role ID**: {userRole['user_role_id']}, **User ID**: {userRole['user_id']}, **Role ID**: {userRole['role_id']}")
 
-    # Role Menu
+
     if menu == "Roles":
         st.title("Manage Roles")
         action = st.selectbox("Action", ["Add", "Update", "Delete", "View All","View One"])
