@@ -16,12 +16,12 @@ class UserRepository:
     def __init__(self, session_factory: Generator[Session, None, None]) -> None:
         self.session_factory = session_factory
 
-    def get_all(self):    # get all
+    def get_all(self): 
         with self.session_factory() as session:
             users = session.query(User).all()
             return [GetUserResponse.from_orm(user) for user in users]
 
-    def get_by_id(self, user_id: int):  # get 1
+    def get_by_id(self, user_id: int): 
         with self.session_factory() as session:
             user = session.query(User).filter(User.user_id == user_id).first()
             if not user:
@@ -35,7 +35,7 @@ class UserRepository:
                 raise UserNotFoundError(user_id)
             return LoginUserResponse.from_orm(user) 
 
-    def add(self, user_id:int ,uname:str,password:str) -> User:  # add 1
+    def add(self, user_id:int ,uname:str,password:str) -> User: 
         with self.session_factory() as session:
             created_at = datetime.datetime.now()
             user = User(user_id=user_id, uname=uname, password=password, created_at=created_at, updated_at=None)
@@ -45,7 +45,7 @@ class UserRepository:
             print("user added successfully")
             return CreateUserResponse.from_orm(user)
 
-    def delete_by_id(self, user_id: int) -> None:    # delete 1
+    def delete_by_id(self, user_id: int) -> None:
         with self.session_factory() as session:
             entity: User = session.query(User).filter(User.user_id == user_id).first()
             if not entity:
