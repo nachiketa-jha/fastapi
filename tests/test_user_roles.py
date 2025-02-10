@@ -32,7 +32,7 @@ def user_role_repo():
 
 @pytest.fixture
 def sample_user_role(user_role_repo):
-    if not user_role_repo.get_all():  # Add user only if table is empty
+    if not user_role_repo.get_all():
         user_role_repo.add_user_role(user_role_id=0, user_id=0, role_id=0)
     return user_role_repo.getUserRole(0)
 
